@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>the Blob</title>
+    <style>
+      body {
+        background-image: linear-gradient(#444, #666, #444);
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <canvas id="myCanvas" />
+    </div>
+    <script>
+      var counter = 0;
+      me = new player(300, 300);
+      foe = new player(400, 400);
+      var thetaDerivative = 0.0;
+
+      window.addEventListener(
+        'keydown',
+        function (event) {
+          if (event.defaultPrevented) {
+            return;
+          }
+          switch (event.key) {
+            case 'ArrowLeft':
+              thetaDerivative -= thetaDerivative > -0.2 ? 0.05 : 0;
+              break;
+            case 'ArrowRight':
+              thetaDerivative += thetaDerivative < 0.2 ? 0.05 : 0;
+              break;
+            case 'ArrowUp':
+              me.radius += 0.3;
+              break;
+            case 'ArrowDown':
+              me.radius -= 0.3;
+              break;
+            default:
+              return;
+          }
+
+          // limit radius (think of it as speed) between zero and two
+          me.radius = me.radius > 6 ? 6 : me.radius < -1 ? -1 : me.radius;
+          me.theta = me.theta % (2 * Math.PI);
+          event.preventDefault();
+        },
+        true
+      ); // end add event listener
+
+      function startGame() {
+        myGameArea.start();
+      }
+
+      const canvas = document.getElementById('myCanvas');
+      const ctx = canvas.getContext('2d');
+
+      function drawTank(x, y, r, theta) {
+        return new Promise((resolve) => {
+          ctx.save();
+          ctx.translate(x, y); // Translate to the center of the rectangle before rotating
+          ctx.rotate(theta);
+
+          // Draw the rectangle - body of tank
+          ctx.beginPath();
+          ctx.strokeStyle = '#000'; // Border color
+          ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+          ctx.lineWidth = 4;
+          ctx.rect(-18, -12, 36, 24); // Rectangle centered at (0,0) after translation
+          ctx.fill();
+          ctx.stroke(); // Stroke after fill to ensure border appears
+          ctx.closePath();
+
+          // Draw the arc (circle) - tank turret
+          ctx.beginPath();
+          ctx.strokeStyle = '#000';
+          ctx.arc(0, 0, r, 0, 2 * Math.PI); // Draw the circle
+          ctx.stroke();
+          ctx.closePath();
+
+          ctx.restore();
+          resolve();
+        });
+      }
+
+      var myGameArea = {
+        canvas: document.getElementById('myCanvas'),
+        start: function () {
+          this.canvas.width = 1000;
+          this.canvas.height = 800;
+          this.context = this.canvas.getContext('2d');
+          document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+          this.frameNo = 0;
+          this.interval = setInterval(updateGameArea, 100);
+        },
+        clear: function () {},
+      };
+
+      function player(x, y) {
+        this.x = x;
+        this.y = y;
+        this.theta = 0;
+        this.radius = 2;
+
+        this.update = function () {
+          thetaDerivative += thetaDerivative < 0 ? 0.03 : -0.03;
+          this.radius += this.radius > 3 ? -0.1 : 0;
+          this.theta += thetaDerivative;
+          this.theta =
+            this.x > 1000 || this.x < 0
+              ? Math.PI - (this.theta % (2 * Math.PI))
+              : this.y > 800 || this.y < 0
+              ? (2 * Math.PI - this.theta) % (2 * Math.PI)
+              : this.theta;
+          this.x += this.radius * Math.cos(this.theta);
+          this.y += this.radius * Math.sin(this.theta);
+          this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
+          this.y = this.y > 800 ? 0 : this.y < 0 ? 800 : this.y;
+
+          drawTank(this.x, this.y, 10, this.theta); // magic 10 is radius of player
+        };
+      } // end function player
+
+      function enemy(x, y) {
+        this.x = x;
+        this.y = y;
+        this.theta = 0;
+        this.radius = 2;
+
+        this.update = function () {
+          thetaDerivative += thetaDerivative < 0 ? 0.03 : -0.03;
+          this.radius += this.radius > 3 ? -0.1 : 0;
+          this.theta += thetaDerivative;
+          this.theta =
+            this.x > 1000 || this.x < 0
+              ? Math.PI - (this.theta % (2 * Math.PI))
+              : this.y > 800 || this.y < 0
+              ? (2 * Math.PI - this.theta) % (2 * Math.PI)
+              : this.theta;
+          this.x += this.radius * Math.cos(this.theta);
+          this.y += this.radius * Math.sin(this.theta);
+          this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
+          this.y = this.y > 800 ? 0 : this.y < 0 ? 800 : this.y;
+
+          drawTank(this.x, this.y, 10, this.theta); // magic 10 is radius of player
+        };
+      } // end function enemy
+
+      function updateGameArea() {
+        myGameArea.clear();
+        ctx.fillStyle = 'rgba(150,150,150,0.3)';
+        ctx.fillRect(0, 0, 1000, 800);
+        me.update();
+        foe.update();
+      } // end function updateGameArea()
+
+      startGame();
+    </script>
+  </body>
+</html>
