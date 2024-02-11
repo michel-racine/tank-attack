@@ -17,8 +17,23 @@
     <script>
       var counter = 0;
       me = new player(300, 300);
-      foe = new player(400, 400);
+      buddy0 = new buddy(400, 100);
+      buddy1 = new buddy(500, 300);
+
       var thetaDerivative = 0.0;
+
+      let xM = 0;
+      let yM = 0;
+
+      // Add click event listener to the document
+      document.addEventListener('click', function (event) {
+        // Update x and y variables with mouse click coordinates
+        xM = event.clientX;
+        yM = event.clientY;
+
+        // You can use x and y variables here or call a function passing these values
+        console.log('Mouse clicked at:', xM, yM);
+      });
 
       window.addEventListener(
         'keydown',
@@ -58,6 +73,23 @@
       const canvas = document.getElementById('myCanvas');
       const ctx = canvas.getContext('2d');
 
+      function drawTarget() {
+        return new Promise((resolve) => {
+          ctx.save();
+          ctx.translate(xM, yM);
+
+          // Draw the target arc circle
+          ctx.beginPath();
+          ctx.strokeStyle = '#F00';
+          ctx.arc(0, 0, 25, 0, 2 * Math.PI); // Draw the circle
+          ctx.stroke();
+          ctx.closePath();
+
+          ctx.restore();
+          resolve();
+        });
+      } // end draw target
+
       function drawTank(x, y, r, theta) {
         return new Promise((resolve) => {
           ctx.save();
@@ -84,13 +116,13 @@
           ctx.restore();
           resolve();
         });
-      }
+      } // end drawTank
 
       var myGameArea = {
         canvas: document.getElementById('myCanvas'),
         start: function () {
           this.canvas.width = 1000;
-          this.canvas.height = 800;
+          this.canvas.height = 600;
           this.context = this.canvas.getContext('2d');
           document.body.insertBefore(this.canvas, document.body.childNodes[0]);
           this.frameNo = 0;
@@ -107,43 +139,45 @@
 
         this.update = function () {
           thetaDerivative += thetaDerivative < 0 ? 0.03 : -0.03;
-          this.radius += this.radius > 3 ? -0.1 : 0;
+          this.radius += this.radius > 4 ? -0.1 : 0;
           this.theta += thetaDerivative;
           this.theta =
             this.x > 1000 || this.x < 0
               ? Math.PI - (this.theta % (2 * Math.PI))
-              : this.y > 800 || this.y < 0
+              : this.y > 600 || this.y < 0
               ? (2 * Math.PI - this.theta) % (2 * Math.PI)
               : this.theta;
           this.x += this.radius * Math.cos(this.theta);
           this.y += this.radius * Math.sin(this.theta);
           this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
-          this.y = this.y > 800 ? 0 : this.y < 0 ? 800 : this.y;
+          this.y = this.y > 600 ? 0 : this.y < 0 ? 600 : this.y;
 
           drawTank(this.x, this.y, 10, this.theta); // magic 10 is radius of player
         };
       } // end function player
 
-      function enemy(x, y) {
+      function buddy(x, y) {
         this.x = x;
         this.y = y;
         this.theta = 0;
-        this.radius = 2;
+        this.radius = 2 + Math.random() * 2; // effectively speed
 
         this.update = function () {
-          thetaDerivative += thetaDerivative < 0 ? 0.03 : -0.03;
-          this.radius += this.radius > 3 ? -0.1 : 0;
-          this.theta += thetaDerivative;
-          this.theta =
-            this.x > 1000 || this.x < 0
-              ? Math.PI - (this.theta % (2 * Math.PI))
-              : this.y > 800 || this.y < 0
-              ? (2 * Math.PI - this.theta) % (2 * Math.PI)
-              : this.theta;
+          var x1 = xM - this.x;
+          var y1 = yM - this.y;
+          this.theta = Math.atan(y1 / x1);
+          if ((this.x > xM && this.y > yM) || (xM < this.x && yM > this.y))
+            this.theta += Math.PI;
+
+          if (
+            Math.sqrt(Math.pow(xM - this.x, 2) + Math.pow(yM - this.y, 2)) < 80
+          )
+            this.radius -= this.radius > 0 ? 0.2 : 0;
+          else this.radius += this.radius < 5 ? 0.22 : 0;
           this.x += this.radius * Math.cos(this.theta);
           this.y += this.radius * Math.sin(this.theta);
           this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
-          this.y = this.y > 800 ? 0 : this.y < 0 ? 800 : this.y;
+          this.y = this.y > 600 ? 0 : this.y < 0 ? 600 : this.y;
 
           drawTank(this.x, this.y, 10, this.theta); // magic 10 is radius of player
         };
@@ -152,9 +186,11 @@
       function updateGameArea() {
         myGameArea.clear();
         ctx.fillStyle = 'rgba(150,150,150,0.3)';
-        ctx.fillRect(0, 0, 1000, 800);
+        ctx.fillRect(0, 0, 1000, 600);
         me.update();
-        foe.update();
+        buddy0.update();
+        buddy1.update();
+        drawTarget();
       } // end function updateGameArea()
 
       startGame();
