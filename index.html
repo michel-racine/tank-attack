@@ -3,10 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>the Blob</title>
+    <title>Tank War</title>
     <style>
       body {
         background-image: linear-gradient(#444, #666, #444);
+        text-align: center;
+      }
+      canvas {
+        padding-top: 4%;
       }
     </style>
   </head>
@@ -113,6 +117,14 @@
           ctx.stroke();
           ctx.closePath();
 
+          // Draw the line connected to the circle
+          ctx.beginPath();
+          ctx.moveTo(0, 0); // Start point at the center of the circle
+          ctx.lineTo(23, 0); // End point of the line (adjust coordinates as needed)
+          ctx.strokeStyle = '#000'; // Set color for the line
+          ctx.stroke();
+          ctx.closePath();
+
           ctx.restore();
           resolve();
         });
@@ -156,6 +168,23 @@
         };
       } // end function player
 
+      function deferBuddy0() {
+        if (
+          Math.sqrt(
+            Math.pow(buddy0.x - me.x, 2) + Math.pow(buddy0.y - me.y, 2)
+          ) < 80
+        )
+          buddy0.radius *= 0.8;
+      }
+      function deferBuddy1() {
+        if (
+          Math.sqrt(
+            Math.pow(buddy0.x - buddy1.x, 2) + Math.pow(buddy0.y - buddy1.y, 2)
+          ) < 80
+        )
+          buddy1.radius *= 0.8;
+      }
+
       function buddy(x, y) {
         this.x = x;
         this.y = y;
@@ -163,17 +192,20 @@
         this.radius = 2 + Math.random() * 2; // effectively speed
 
         this.update = function () {
+          xM = me.x;
+          yM = me.y;
           var x1 = xM - this.x;
           var y1 = yM - this.y;
+          // var x1 = me.x - this.x;
+          // var y1 = me.x - this.y;
           this.theta = Math.atan(y1 / x1);
           if ((this.x > xM && this.y > yM) || (xM < this.x && yM > this.y))
             this.theta += Math.PI;
-
           if (
-            Math.sqrt(Math.pow(xM - this.x, 2) + Math.pow(yM - this.y, 2)) < 80
+            Math.sqrt(Math.pow(xM - this.x, 2) + Math.pow(yM - this.y, 2)) < 80 // distance formula
           )
             this.radius -= this.radius > 0 ? 0.2 : 0;
-          else this.radius += this.radius < 5 ? 0.22 : 0;
+          else this.radius += this.radius < 5 ? 0.42 : 0;
           this.x += this.radius * Math.cos(this.theta);
           this.y += this.radius * Math.sin(this.theta);
           this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
@@ -190,7 +222,9 @@
         me.update();
         buddy0.update();
         buddy1.update();
-        drawTarget();
+        deferBuddy0();
+        deferBuddy1();
+        //        drawTarget();
       } // end function updateGameArea()
 
       startGame();
