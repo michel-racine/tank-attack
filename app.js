@@ -1,3 +1,6 @@
+// This file exists only for reference. It was part of a previous version
+// and may be useful in future versions
+
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
