@@ -9,29 +9,38 @@
         background-image: linear-gradient(#444, #666, #444);
         text-align: center;
       }
-      canvas {
-        padding-top: 4%;
-      }
     </style>
   </head>
+
   <body>
     <div>
       <canvas id="myCanvas" />
     </div>
     <script>
+      var displayWidth = window.innerWidth - 60;
+      var displayHeight = window.innerHeight - 60;
+
+      // var backgroundMuzak = new Audio('little_echo.wav');
+      // backgroundMuzak.volume = 0.25;
+      // backgroundMuzak.load();
+      // backgroundMuzak.play();
       var counter = 0;
       me = new player(300, 300);
       var Friends = [];
       var numFriends = 6;
       // Create 10 instances of the buddy function and push them into the array
       for (var i = 0; i < numFriends; i++) {
-        var x = Math.random() * 100; // randomish initial location
-        var y = Math.random() * 60;
+        var x = Math.random() * displayWidth; // randomish initial location
+        var y = Math.random() * displayWidth;
         var newBuddy = new buddy(x, y);
         Friends.push(newBuddy);
       }
 
       var thetaDerivative = 0.0;
+      let p2x = 0.0; // right flank position
+      let p2y = 0.0;
+      let p3x = 0.0; // left flank position
+      let p3y = 0.0;
 
       let xM = 0;
       let yM = 0;
@@ -54,24 +63,22 @@
           }
           switch (event.key) {
             case 'ArrowLeft':
-              // thetaDerivative -= thetaDerivative > -0.2 ? 0.05 : 0;
-              thetaDerivative -= 0.01;
+              thetaDerivative -= thetaDerivative > -0.1 ? 0.05 : 0;
               break;
             case 'ArrowRight':
-              // thetaDerivative += thetaDerivative < 0.2 ? 0.05 : 0;
-              thetaDerivative += 0.01;
+              thetaDerivative += thetaDerivative < 0.1 ? 0.05 : 0;
               break;
             case 'ArrowUp':
-              me.radius += 0.3;
+              me.radius += 0.5;
               break;
             case 'ArrowDown':
-              me.radius -= 0.3;
+              me.radius -= 0.5;
               break;
             default:
               return;
           }
 
-          // limit radius (think of it as speed) between zero and two
+          // limit radius (speed) between zero and 8
           me.radius = me.radius > 8 ? 8 : me.radius < -1 ? -1 : me.radius;
           me.theta = me.theta % (2 * Math.PI);
           event.preventDefault();
@@ -86,10 +93,10 @@
       const canvas = document.getElementById('myCanvas');
       const ctx = canvas.getContext('2d');
 
-      function drawTarget() {
+      function drawTarget(x, y) {
         return new Promise((resolve) => {
           ctx.save();
-          ctx.translate(xM, yM);
+          ctx.translate(x, y);
 
           // Draw the target arc circle
           ctx.beginPath();
@@ -103,7 +110,7 @@
         });
       } // end draw target
 
-      function drawTank(x, y, r, theta) {
+      function drawTank(x, y, r, theta, c) {
         return new Promise((resolve) => {
           ctx.save();
           ctx.translate(x, y); // Translate to the center of the rectangle before rotating
@@ -112,7 +119,7 @@
           // Draw the rectangle - body of tank
           ctx.beginPath();
           ctx.strokeStyle = '#000'; // Border color
-          ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+          ctx.fillStyle = 'rgba(200, 255, 200, 1.0)';
           ctx.lineWidth = 4;
           ctx.rect(-18, -12, 36, 24); // Rectangle centered at (0,0) after translation
           ctx.fill();
@@ -142,8 +149,8 @@
       var myGameArea = {
         canvas: document.getElementById('myCanvas'),
         start: function () {
-          this.canvas.width = 1000;
-          this.canvas.height = 600;
+          this.canvas.width = displayWidth;
+          this.canvas.height = window.innerHeight;
           this.context = this.canvas.getContext('2d');
           document.body.insertBefore(this.canvas, document.body.childNodes[0]);
           this.frameNo = 0;
@@ -164,17 +171,23 @@
           this.radius += this.radius > 8 ? -0.1 : 0;
           this.theta += thetaDerivative;
           this.theta =
-            this.x > 1000 || this.x < 0
+            this.x > displayWidth || this.x < 0
               ? Math.PI - (this.theta % (2 * Math.PI))
-              : this.y > 600 || this.y < 0
+              : this.y > window.innerHeight || this.y < 0
               ? (2 * Math.PI - this.theta) % (2 * Math.PI)
               : this.theta;
           this.x += this.radius * Math.cos(this.theta);
           this.y += this.radius * Math.sin(this.theta);
-          this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
-          this.y = this.y > 600 ? 0 : this.y < 0 ? 600 : this.y;
+          this.x =
+            this.x > displayWidth ? 0 : this.x < 0 ? displayWidth : this.x;
+          this.y =
+            this.y > window.innerHeight
+              ? 0
+              : this.y < 0
+              ? window.innerHeight
+              : this.y;
 
-          drawTank(this.x, this.y, 10, this.theta); // magic 10 is radius of player
+          drawTank(this.x, this.y, 10, this.theta, 0); // magic 10 is radius of player
         };
       } // end function player
 
@@ -189,33 +202,42 @@
             Math.sqrt(Math.pow(this.x - f.x, 2) + Math.pow(this.y - f.y, 2)) <
             100
           ) {
-            // this.radius -= 0.025;
             this.radius = f.radius * 0.5;
           } else {
             this.radius += this.radius < 2.5 ? 0.1 : 0;
           }
         };
 
-        this.update = function () {
-          xM = me.x;
-          yM = me.y;
+        this.update = function (a, b) {
+          // xM = me.x;
+          // yM = me.y;
+          // updated to follow flank
+          xM = a;
+          yM = b;
+
           var x1 = xM - this.x;
           var y1 = yM - this.y;
           this.theta = Math.atan(y1 / x1);
           if ((this.x > xM && this.y > yM) || (xM < this.x && yM > this.y))
             this.theta += Math.PI;
           if (
-            Math.sqrt(Math.pow(xM - this.x, 2) + Math.pow(yM - this.y, 2)) < 100 // distance formula
+            Math.sqrt(Math.pow(xM - this.x, 2) + Math.pow(yM - this.y, 2)) < 40 // distance formula
           ) {
             // this.radius -= this.radius > 0 ? 0.2 : 0;
             this.radius *= 0.95;
           } else this.radius += this.radius < 5 ? 0.2 : 0;
           this.x += this.radius * Math.cos(this.theta);
           this.y += this.radius * Math.sin(this.theta);
-          this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
-          this.y = this.y > 600 ? 0 : this.y < 0 ? 600 : this.y;
+          this.x =
+            this.x > displayWidth ? 0 : this.x < 0 ? displayWidth : this.x;
+          this.y =
+            this.y > window.innerHeight
+              ? 0
+              : this.y < 0
+              ? window.innerHeight
+              : this.y;
 
-          drawTank(this.x, this.y, 10, this.theta); // magic 10 is radius of player
+          drawTank(this.x, this.y, 10, this.theta, 1); // magic 10 is radius of player
         };
 
         // overidden version
@@ -235,30 +257,53 @@
           } else this.radius *= this.radius < 5 ? 1.1 : 1;
           this.x += this.radius * Math.cos(this.theta);
           this.y += this.radius * Math.sin(this.theta);
-          this.x = this.x > 1000 ? 0 : this.x < 0 ? 1000 : this.x;
-          this.y = this.y > 600 ? 0 : this.y < 0 ? 600 : this.y;
+          this.x =
+            this.x > displayWidth ? 0 : this.x < 0 ? displayWidth : this.x;
+          this.y =
+            this.y > window.innerHeight
+              ? 0
+              : this.y < 0
+              ? window.innerHeight
+              : this.y;
 
-          drawTank(this.x, this.y, 10, this.theta); // magic 10 is radius of player
+          drawTank(this.x, this.y, 10, this.theta, 1); // magic 10 is radius of player
         };
       } // end function enemy
 
       function updateGameArea() {
         myGameArea.clear();
         ctx.fillStyle = 'rgba(150,150,150,0.3)';
-        ctx.fillRect(0, 0, 1000, 600);
+        ctx.fillRect(0, 0, displayWidth, window.innerHeight);
         me.update();
-        //        for (var i = 0; i < numFriends; i++) {
-        //          Friends[i].update();
-        Friends[0].update();
-        //        }
+
+        Friends[0].update(p2x, p2y);
+        Friends[numFriends - 1].update(p3x, p3y);
+
         // make sure one friend follows the next
-        for (var i = 1; i < numFriends; i++) {
+        var i = 1;
+        for (; i < numFriends / 2; i++) {
           Friends[i].compareNext(Friends[i - 1]);
           Friends[i].update1(Friends[i - 1]);
-          // for (var j = i - 1; j >= i - 2; j--) {
-          //   Friends[i].compareNext(Friends[j]);
-          // }
         }
+        for (i = numFriends - 2; i >= numFriends / 2; i--) {
+          Friends[i].compareNext(Friends[i + 1]);
+          Friends[i].update1(Friends[i + 1]);
+        }
+
+        // figure out player flanks in complex plane
+        // let r = me.radius * 10 + 25;
+        let r = (8 - me.radius) * 15 + 25; // the slower the player is going, the wider the flank
+        let y = r * Math.sin(me.theta);
+        let x = r * Math.cos(me.theta);
+        // Right flank:
+        p2x = -y + me.x;
+        p2y = x + me.y;
+        drawTarget(p2x, p2y);
+        // Left flank:
+        p3x = y + me.x;
+        p3y = -x + me.y;
+        drawTarget(p3x, p3y);
+        //
       } // end function updateGameArea()
 
       startGame();
